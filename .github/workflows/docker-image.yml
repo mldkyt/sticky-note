@@ -1,0 +1,39 @@
+name: Docker Image CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Build the Docker image
+      run: |
+        docker build . --file Dockerfile --tag code-clock:latest
+        docker save --output codeclock.tar code-clock:latest
+        
+# Tour de App deployment
+
+    - name: Get Deploy Access
+      id: deployAccess
+      uses: fjogeleit/http-request-action@v1
+      with:
+        url: 'https://api.tourdeapp.cz/get-auth'
+        method: 'POST'
+        data: '{"team_secret": "4edf7cc1b1b1adc7570ad97f9c3219fa"}'
+    - name: Login to Docker Hub
+      uses: docker/login-action@v1
+      with:
+        registry: registry.tourdeapp.cz
+        username: tda-user
+        password: ${{ fromJson(steps.deployAccess.outputs.response).key }}
+    - name: Load and push image
+      env:
+          IMAGE: ${{ fromJson(steps.deployAccess.outputs.response).name }}
+      shell: bash
+      run: |
+        docker load --input codeclock.tar
+        docker tag sticky-note:latest $IMAGE
+        docker push $IMAGE
