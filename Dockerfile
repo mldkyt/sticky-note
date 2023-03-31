@@ -1,5 +1,6 @@
 FROM node:latest
-COPY * *
+WORKDIR /app
+COPY . .
 RUN rm -rf /node_modules
 RUN rm -rf /.next
 RUN npm install
